@@ -453,7 +453,47 @@
   .row .amt { text-align: right; flex: 0 0 auto; }
   .row .amt .eur { font-family: var(--font-round); font-weight: 600; font-variant-numeric: tabular-nums; }
   .row .amt .orig { font-size: 14px; color: var(--text-2); margin-top: 2px; font-variant-numeric: tabular-nums; }
-  .list-hint { margin: 8px 16px 0; font-size: 13px; color: var(--text-2); }
+  .list-hint { margin: 8px 16px 0; font-size: 13px; color: var(--text-2); line-height: 1.4; }
+  .sec-btn {
+    border: none;
+    background: transparent;
+    color: var(--accent);
+    font-size: 17px;
+    font-weight: 400;
+    letter-spacing: -0.2px;
+    min-height: 44px;
+    margin: -10px -4px;
+    padding: 0 4px;
+    cursor: pointer;
+  }
+  .sec-btn.strong { font-weight: 600; }
+  .sec-btn:active { opacity: 0.5; }
+  /* Bearbeiten-Modus: rotes Minus vor jedem Eintrag, wie in Mail oder Notizen */
+  .row .minus {
+    display: none;
+    position: relative;
+    flex: 0 0 22px;
+    width: 22px; height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: var(--red);
+    cursor: pointer;
+  }
+  .row .minus::before {
+    content: "";
+    position: absolute;
+    left: 5px; right: 5px; top: 10px;
+    height: 2px;
+    border-radius: 1px;
+    background: #fff;
+    transition: transform 0.25s var(--ease);
+  }
+  .row .minus::after { content: ""; position: absolute; inset: -11px; }
+  .row.open .minus::before { transform: rotate(90deg); }
+  .editing .row .minus { display: block; animation: popIn 0.25s var(--ease); }
+  .editing .swipe + .swipe .row::before { left: 98px; }
+  @keyframes popIn { from { transform: scale(0.3); opacity: 0; } to { transform: none; opacity: 1; } }
   .empty {
     text-align: center;
     padding: 34px 24px;
@@ -527,6 +567,39 @@
   }
   .sheet .note { font-size: 13px; color: var(--text-2); margin: 8px 16px 18px; line-height: 1.4; }
   .sheet .error { margin: 10px 16px 0; }
+  .search-bar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    margin: 0 0 4px;
+    padding: 0 10px;
+    border-radius: 10px;
+    background: var(--row);
+    box-shadow: 0 -8px 0 8px var(--group);
+    color: var(--text-2);
+  }
+  .search-bar svg { width: 16px; height: 16px; flex: 0 0 16px; }
+  .search-bar input {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 17px;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .search-bar input::placeholder { color: var(--text-2); }
+  .search-bar input:focus-visible { outline: none; }
+  .search-bar:focus-within { box-shadow: 0 -8px 0 8px var(--group), 0 0 0 1.5px var(--accent); }
+  .rate-sec-title { margin: 22px 16px 7px; font-size: 13px; font-weight: 400; color: var(--text-2); }
+  .rate-none { text-align: center; color: var(--text-2); font-size: 15px; margin: 28px 16px; }
+  .hide { display: none !important; }
   .rates-group { background: var(--row); border-radius: 12px; overflow: hidden; }
   .rate-row {
     position: relative;
@@ -536,7 +609,7 @@
     min-height: 58px;
     padding: 6px 12px 6px 14px;
   }
-  .rate-row + .rate-row::before {
+  .rate-row:not(.hide) ~ .rate-row:not(.hide)::before {
     content: "";
     position: absolute;
     top: 0; left: 56px; right: 0;
@@ -547,7 +620,7 @@
   .rate-row .lbl b { display: block; font-weight: 600; }
   .rate-row .lbl small { display: block; color: var(--text-2); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .rate-input {
-    width: 124px;
+    width: 132px;
     height: 40px;
     border: 1.5px solid transparent;
     border-radius: 10px;
@@ -590,7 +663,8 @@
   .switch input:checked + .track { background: var(--green); }
   .switch input:checked + .track::after { transform: translateX(20px); }
   .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .sheet .btn-secondary { margin-top: 24px; }
+  .sheet .btn-secondary { margin-top: 28px; }
+  .sheet .toggle-row { margin-bottom: 4px; }
 
   .alert {
     width: 100%;
@@ -764,7 +838,7 @@
     </div>
   </section>
 
-  <h2 class="sec">Verlauf</h2>
+  <h2 class="sec">Verlauf<button class="sec-btn" id="editBtn" type="button" hidden>Bearbeiten</button></h2>
   <section id="list"></section>
 
   <div class="group" style="margin-top:30px">
@@ -782,13 +856,17 @@
       <button class="btn btn-plain strong" type="button" id="ratesSave">Sichern</button>
     </div>
     <div class="sheet-body">
-      <div class="rates-group" id="ratesList"></div>
-      <p class="error" id="ratesError" role="alert"></p>
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <input id="rateSearch" type="search" placeholder="Währung oder Land suchen" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" aria-label="Währung suchen">
+      </div>
       <p class="note">Wie viel Euro eine Einheit der Fremdwährung wert ist. Neue Ausgaben werden mit diesen Kursen umgerechnet.</p>
       <label class="toggle-row" for="recalcToggle">
         <span class="txt">Bisherige Ausgaben neu umrechnen</span>
         <span class="switch"><input type="checkbox" id="recalcToggle"><span class="track"></span></span>
       </label>
+      <p class="error" id="ratesError" role="alert"></p>
+      <div id="ratesList"></div>
       <button class="btn btn-secondary" type="button" id="ratesDefault">Standardkurse wiederherstellen</button>
     </div>
   </div>
@@ -820,21 +898,41 @@
 
   /* ---------- Konstanten ---------- */
   var STORAGE_KEY = 'reisekosten.v1';
-  var CURRENCIES = ['EUR', 'USD', 'GBP', 'JPY', 'CHF', 'KRW', 'CNY', 'AUD', 'CAD', 'VND', 'THB'];
-  var CURRENCY_FLAGS = {
-    EUR: '🇪🇺', USD: '🇺🇸', GBP: '🇬🇧', JPY: '🇯🇵', CHF: '🇨🇭',
-    KRW: '🇰🇷', CNY: '🇨🇳', AUD: '🇦🇺', CAD: '🇨🇦', VND: '🇻🇳', THB: '🇹🇭'
-  };
-  var CURRENCY_NAMES = {
-    EUR: 'Euro', USD: 'US-Dollar', GBP: 'Britisches Pfund', JPY: 'Japanischer Yen', CHF: 'Schweizer Franken',
-    KRW: 'Südkoreanischer Won', CNY: 'Chinesischer Yuan', AUD: 'Australischer Dollar',
-    CAD: 'Kanadischer Dollar', VND: 'Vietnamesischer Dong', THB: 'Thailändischer Baht'
-  };
-  /* Euro pro 1 Einheit. KRW–THB: EZB-Referenzkurse vom 16.09.2026, VND vom 19.10.2026 (gerundet). */
-  var DEFAULT_RATES = {
-    EUR: 1, USD: 0.92, GBP: 1.16, JPY: 0.006, CHF: 1.05,
-    KRW: 0.00063, CNY: 0.13, AUD: 0.62, CAD: 0.62, VND: 0.0000344, THB: 0.026
-  };
+  /*
+   * Alle aktuell gültigen Währungen (ISO 4217) mit Standardkurs in "Einheiten pro 1 Euro".
+   * Quelle: currencyconverter.org, Stand 19.10.2026, gegengeprüft mit fxrate.io und den EZB-Referenzkursen.
+   * Neue Währung ergänzen: einfach "CODE Kurs" anhängen – Name und Flagge ermittelt die App selbst.
+   */
+  var PER_EUR =
+    'AED 4.118 AFN 72.7683 ALL 90.782 AMD 405.15 AOA 1023.64 ARS 1708.98 AUD 1.606 ' +
+    'AWG 2.0069 AZN 1.906 BAM 1.9558 BBD 2.2424 BDT 138.51 BHD 0.42156 BIF 3362.85 ' +
+    'BMD 1.1212 BND 1.4362 BOB 13.1178 BRL 5.6594 BSD 1.1212 BTN 106.42 BWP 14.9891 ' +
+    'BYN 3.3411 BZD 2.2424 CAD 1.5817 CDF 2542.07 CHF 0.92682 CLP 1100.48 CNY 7.4902 ' +
+    'COP 3533.17 CRC 509.1 CUP 26.9083 CVE 110.27 CZK 24.3346 DJF 199.26 DKK 7.4747 ' +
+    'DOP 68.9638 DZD 151.53 EGP 60.4398 ERN 16.8177 ETB 180.38 FJD 2.5332 FKP 0.84268 ' +
+    'GBP 0.84273 GEL 2.9131 GHS 13.0872 GIP 0.84268 GMD 84.0773 GNF 9930.3 GTQ 8.5636 ' +
+    'GYD 234.09 HKD 8.7992 HNL 30.1667 HTG 149.04 HUF 362.69 IDR 20121.8 ILS 3.4782 ' +
+    'INR 106.39 IQD 1695.22 IRR 2.04905e+06 ISK 136.2 JMD 177.42 JOD 0.79604 JPY 177.76 ' +
+    'KES 145.57 KGS 98.0786 KHR 4559.84 KMF 491.93 KPW 1009.06 KRW 1493.36 KWD 0.34864 ' +
+    'KYD 0.93431 KZT 506.65 LAK 25066.5 LBP 100346 LKR 371.59 LRD 191.29 LSL 18.5219 ' +
+    'LYD 7.1934 MAD 10.9805 MDL 19.9761 MGA 5095.77 MKD 61.5752 MMK 2354.12 MNT 4032.35 ' +
+    'MOP 9.0635 MRU 45.0006 MUR 52.9646 MVR 17.3335 MWK 1943.76 MXN 20.6711 MYR 4.5778 ' +
+    'MZN 71.2398 NAD 18.4199 NGN 1493.25 NIO 41.252 NOK 10.5594 NPR 170.28 NZD 1.9802 ' +
+    'OMR 0.43177 PAB 1.1212 PEN 3.8541 PGK 4.9544 PHP 70.6271 PKR 310.23 PLN 4.3711 ' +
+    'PYG 6464.63 QAR 4.0822 RON 5.3264 RSD 117.42 RUB 92.777 RWF 1654.01 SAR 4.2063 ' +
+    'SBD 9.0467 SCR 16.7037 SDG 674.39 SEK 11.1242 SGD 1.4353 SHP 0.84111 SLE 25.9281 ' +
+    'SOS 640.98 SRD 42.3021 STN 24.6811 SVC 9.8103 SYP 136.26 SZL 18.4087 THB 37.6537 ' +
+    'TJS 10.3597 TMT 3.9241 TND 3.3439 TOP 2.6829 TRY 55.5563 TTD 7.5625 TWD 36.4605 ' +
+    'TZS 2946.46 UAH 50.4391 UGX 4659.29 USD 1.1212 UYU 45.012 UZS 13504.3 VES 986.07 ' +
+    'VND 29035.2 VUV 134 WST 3.1075 XAF 655.96 XCD 3.0272 XCG 2.0195 XOF 655.96 ' +
+    'XPF 119.97 YER 264.73 ZAR 18.425 ZMW 22.5357 ZWG 29.9485';
+  var DEFAULT_RATES = { EUR: 1 };
+  PER_EUR.trim().split(/\s+/).forEach(function (part, i, arr) {
+    if (i % 2) DEFAULT_RATES[arr[i - 1]] = Number((1 / Number(part)).toPrecision(4));
+  });
+  /* Diese vier Kurse stammen aus der ursprünglichen Vorgabe und bleiben unverändert */
+  Object.assign(DEFAULT_RATES, { USD: 0.92, GBP: 1.16, JPY: 0.006, CHF: 1.05 });
+  var CURRENCIES = Object.keys(DEFAULT_RATES);
   var CATEGORIES = {
     'Unterkunft': { color: '#0A84FF', icon: '🏨' },
     'Essen':      { color: '#FF9F0A', icon: '🍽️' },
@@ -855,6 +953,8 @@
     lastCurrency: 'EUR',
     lastCategory: 'Essen'
   };
+
+  var editMode = false; /* Bearbeiten-Modus der Liste (wird nicht gespeichert) */
 
   /* ---------- Helfer ---------- */
   function $(sel) { return document.querySelector(sel); }
@@ -897,17 +997,46 @@
     return Math.round((amount + Number.EPSILON) * f) / f;
   }
 
+  /* Kurs mit bis zu 6 gültigen Stellen – auch für sehr kleine Werte wie beim Iranischen Rial */
   function fmtRate(n) {
-    return n.toLocaleString('de-DE', { maximumFractionDigits: 8, useGrouping: false });
+    return n.toLocaleString('de-DE', { maximumSignificantDigits: 6, useGrouping: false });
+  }
+
+  /* Deutsche Währungsnamen liefert das System (z. B. "Thailändischer Baht") */
+  var currencyNames = null;
+  try { currencyNames = new Intl.DisplayNames(['de'], { type: 'currency' }); } catch (e) {}
+  /* Sehr junge Währungen, die ältere Systeme noch nicht kennen */
+  var FALLBACK_NAMES = { SLE: 'Sierra-leonischer Leone', XCG: 'Karibischer Gulden', ZWG: 'Simbabwe-Gold' };
+  function curName(c) {
+    var n = null;
+    try { n = currencyNames && currencyNames.of(c); } catch (e) {}
+    return n && n !== c ? n : (FALLBACK_NAMES[c] || c);
+  }
+
+  /* Ländername für die Suche (USD → "Vereinigte Staaten"), ebenfalls vom System */
+  var regionNames = null;
+  try { regionNames = new Intl.DisplayNames(['de'], { type: 'region' }); } catch (e) {}
+  function curCountry(c) {
+    if (c.charAt(0) === 'X' && c !== 'XCG') return '';
+    try { return (regionNames && regionNames.of(c === 'XCG' ? 'CW' : c.slice(0, 2))) || ''; } catch (e) { return ''; }
+  }
+
+  /* Flagge aus den ersten zwei Buchstaben des ISO-Codes (USD → US → 🇺🇸), Sonderfälle von Hand */
+  var SPECIAL_FLAGS = { EUR: '🇪🇺', XAF: '🌍', XOF: '🌍', XCD: '🌎', XPF: '🌏', XCG: '🇨🇼' };
+  function curFlag(c) {
+    if (SPECIAL_FLAGS[c]) return SPECIAL_FLAGS[c];
+    return String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65, 0x1F1E6 + c.charCodeAt(1) - 65);
   }
 
   /**
    * Wandelt Benutzereingaben wie "12,50", "12.50", "1.234,56" oder "1,234.56" in eine Zahl.
-   * Bei Geldbeträgen (isMoney) wird ein einzelnes Trennzeichen mit genau drei Folgeziffern
-   * als Tausendertrenner gelesen ("45.000" → 45000), da Beträge nie drei Nachkommastellen haben.
+   * Bei Geldbeträgen (moneyDecimals = Nachkommastellen der Währung) wird ein einzelnes Trennzeichen
+   * mit genau drei Folgeziffern als Tausendertrenner gelesen ("45.000" → 45000) – außer bei Währungen
+   * mit drei Nachkommastellen wie dem Kuwait-Dinar, wo "1.250" wirklich 1,25 bedeutet.
    * Gibt NaN zurück, wenn die Eingabe ungültig ist.
    */
-  function parseAmount(raw, isMoney) {
+  function parseAmount(raw, moneyDecimals) {
+    var isMoney = moneyDecimals != null && moneyDecimals < 3;
     if (raw == null) return NaN;
     var s = String(raw).trim().replace(/[\s '€$£¥₩₫฿]/g, '');
     if (!s || !/^[0-9.,]+$/.test(s)) return NaN;
@@ -1103,7 +1232,13 @@
 
   function renderList() {
     var list = $('#list');
+    var editBtn = $('#editBtn');
     list.textContent = '';
+    if (!state.expenses.length) editMode = false;
+    list.classList.toggle('editing', editMode);
+    editBtn.hidden = !state.expenses.length;
+    editBtn.textContent = editMode ? 'Fertig' : 'Bearbeiten';
+    editBtn.classList.toggle('strong', editMode);
     if (!state.expenses.length) {
       var empty = el('div', 'group empty');
       empty.appendChild(el('div', 'ill', '🧳'));
@@ -1147,6 +1282,12 @@
         wrap.appendChild(del);
 
         var row = el('div', 'row');
+        var minus = el('button', 'minus');
+        minus.type = 'button';
+        minus.tabIndex = editMode ? 0 : -1;
+        minus.setAttribute('aria-label', '„' + e.title + '“ löschen');
+        row.appendChild(minus);
+
         var ico = el('div', 'ico', cat.icon);
         ico.style.background = hexToRgba(cat.color, 0.24);
         ico.setAttribute('aria-hidden', 'true');
@@ -1170,7 +1311,9 @@
       list.appendChild(group);
     });
 
-    list.appendChild(el('p', 'list-hint', 'Zum Löschen einen Eintrag nach links wischen.'));
+    list.appendChild(el('p', 'list-hint', editMode
+      ? 'Tippe auf das rote Minus und dann auf „Löschen“.'
+      : 'Zum Löschen oben auf „Bearbeiten“ tippen – oder einen Eintrag nach links wischen.'));
   }
 
   function render() {
@@ -1197,12 +1340,45 @@
   var formError = $('#formError');
   var form = $('#expenseForm');
 
+  /* Alle Währungen einmalig nach deutschem Namen sortiert */
+  var CURRENCIES_SORTED = CURRENCIES.slice().sort(function (a, b) {
+    return curName(a).localeCompare(curName(b), 'de');
+  });
+
+  /* Zuletzt genutzte Währungen: aktuelle Auswahl, dann aus den neuesten Ausgaben, Euro immer dabei */
+  function recentCurrencies() {
+    var list = [];
+    function add(c) { if (c && list.indexOf(c) < 0 && CURRENCIES.indexOf(c) > -1) list.push(c); }
+    add(state.lastCurrency);
+    state.expenses.slice().sort(function (a, b) {
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
+    }).forEach(function (e) { add(e.currency); });
+    add('EUR');
+    return list.slice(0, 6);
+  }
+
+  function currencyOption(c) {
+    var o = el('option', null, curFlag(c) + ' ' + curName(c) + ' (' + c + ')');
+    o.value = c;
+    return o;
+  }
+
+  function fillCurrencySelect() {
+    var selected = currencySelect.value || state.lastCurrency;
+    currencySelect.textContent = '';
+    var recent = el('optgroup');
+    recent.label = 'Zuletzt verwendet';
+    recentCurrencies().forEach(function (c) { recent.appendChild(currencyOption(c)); });
+    var all = el('optgroup');
+    all.label = 'Alle Währungen';
+    CURRENCIES_SORTED.forEach(function (c) { all.appendChild(currencyOption(c)); });
+    currencySelect.appendChild(recent);
+    currencySelect.appendChild(all);
+    setCurrency(selected);
+  }
+
   function fillControls() {
-    CURRENCIES.forEach(function (c) {
-      var o = el('option', null, CURRENCY_FLAGS[c] + ' ' + c + ' – ' + CURRENCY_NAMES[c]);
-      o.value = c;
-      currencySelect.appendChild(o);
-    });
+    fillCurrencySelect();
     CATEGORY_KEYS.forEach(function (k) {
       var o = el('option', null, k);
       o.value = k;
@@ -1223,7 +1399,7 @@
 
   function setCurrency(c) {
     currencySelect.value = c;
-    $('#curFlag').textContent = CURRENCY_FLAGS[c];
+    $('#curFlag').textContent = curFlag(c);
     $('#curCode').textContent = c;
   }
 
@@ -1266,7 +1442,7 @@
   function updateConvHint() {
     var hint = $('#convHint');
     var cur = currencySelect.value;
-    var val = parseAmount(amountInput.value, true);
+    var val = parseAmount(amountInput.value, decimalsFor(cur));
     if (cur === 'EUR') { hint.textContent = ''; return; }
     var rateTxt = '1 ' + cur + ' = ' + fmtRate(state.rates[cur]) + ' €';
     hint.textContent = (isFinite(val) && val > 0)
@@ -1295,7 +1471,7 @@
     clearFormError();
 
     var title = titleInput.value.trim().replace(/\s+/g, ' ');
-    var amount = parseAmount(amountInput.value, true);
+    var amount = parseAmount(amountInput.value, decimalsFor(currencySelect.value));
     var currency = currencySelect.value;
     var category = categorySelect.value;
 
@@ -1309,8 +1485,9 @@
     var amountOriginal = roundForCurrency(amount, currency);
     if (amountOriginal <= 0) return showFormError('Der Betrag ist zu klein.', amountInput);
 
+    var newId = uid();
     state.expenses.push({
-      id: uid(),
+      id: newId,
       title: title,
       amountOriginal: amountOriginal,
       currency: currency,
@@ -1322,13 +1499,19 @@
     state.lastCategory = category;
     save();
     render();
+    fillCurrencySelect();
     bumpTotal();
 
     titleInput.value = '';
     amountInput.value = '';
     updateConvHint();
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-    showToast('„' + title + '“ hinzugefügt');
+    showToast('„' + title + '“ hinzugefügt', 'Widerrufen', function () {
+      state.expenses = state.expenses.filter(function (x) { return x.id !== newId; });
+      save();
+      render();
+      fillCurrencySelect();
+    });
   });
 
   titleInput.addEventListener('keydown', function (ev) {
@@ -1353,7 +1536,16 @@
   var openRow = null;
   var drag = null;
 
-  function setRowX(row, x) { row.style.transform = x ? 'translateX(' + x + 'px)' : ''; }
+  function setRowX(row, x) {
+    row.style.transform = x ? 'translateX(' + x + 'px)' : '';
+    row.classList.toggle('open', !!x);
+  }
+
+  $('#editBtn').addEventListener('click', function () {
+    openRow = null;
+    editMode = !editMode;
+    renderList();
+  });
   function closeOpenRow() { if (openRow) { setRowX(openRow, 0); openRow = null; } }
 
   function deleteById(id) {
@@ -1373,6 +1565,7 @@
 
   var list = $('#list');
   list.addEventListener('pointerdown', function (ev) {
+    if (ev.target.closest('.minus')) return; /* Minus wird per Klick behandelt */
     var row = ev.target.closest('.row');
     if (!row) return;
     if (openRow && openRow !== row) closeOpenRow();
@@ -1429,7 +1622,15 @@
   list.addEventListener('pointercancel', endDrag);
   list.addEventListener('click', function (ev) {
     var btn = ev.target.closest('.swipe-del');
-    if (btn) deleteById(btn.dataset.id);
+    if (btn) { deleteById(btn.dataset.id); return; }
+    var minus = ev.target.closest('.minus');
+    if (minus) {
+      var row = minus.closest('.row');
+      if (openRow === row) { closeOpenRow(); return; }
+      closeOpenRow();
+      setRowX(row, -ACTION_W);
+      openRow = row;
+    }
   });
   /* Tastatur: Fokus auf den Löschen-Knopf öffnet die Zeile */
   list.addEventListener('focusin', function (ev) {
@@ -1500,38 +1701,75 @@
   var ratesList = $('#ratesList');
   var ratesError = $('#ratesError');
 
+  var rateSearch = $('#rateSearch');
+
+  function rateRow(c, rates) {
+    var row = el('div', 'rate-row');
+    row.dataset.search = (c + ' ' + curName(c) + ' ' + curCountry(c)).toLowerCase();
+    var flag = el('span', 'flag', curFlag(c));
+    flag.setAttribute('aria-hidden', 'true');
+    row.appendChild(flag);
+    var lbl = el('label', 'lbl');
+    lbl.setAttribute('for', 'rate-' + c);
+    lbl.appendChild(el('b', null, '1 ' + c));
+    lbl.appendChild(el('small', null, curName(c)));
+    row.appendChild(lbl);
+    var inp = el('input', 'rate-input');
+    inp.type = 'text';
+    inp.id = 'rate-' + c;
+    inp.setAttribute('inputmode', 'decimal');
+    inp.dataset.currency = c;
+    inp.value = fmtRate(rates[c]);
+    inp.addEventListener('input', function () { inp.classList.remove('invalid'); ratesError.textContent = ''; });
+    row.appendChild(inp);
+    row.appendChild(el('span', 'unit', '€'));
+    return row;
+  }
+
   function buildRatesForm(rates) {
     ratesList.textContent = '';
     ratesError.textContent = '';
-    CURRENCIES.forEach(function (c) {
-      if (c === 'EUR') return;
-      var row = el('div', 'rate-row');
-      var flag = el('span', 'flag', CURRENCY_FLAGS[c]);
-      flag.setAttribute('aria-hidden', 'true');
-      row.appendChild(flag);
-      var lbl = el('label', 'lbl');
-      lbl.setAttribute('for', 'rate-' + c);
-      lbl.appendChild(el('b', null, '1 ' + c));
-      lbl.appendChild(el('small', null, CURRENCY_NAMES[c]));
-      row.appendChild(lbl);
-      var inp = el('input', 'rate-input');
-      inp.type = 'text';
-      inp.id = 'rate-' + c;
-      inp.setAttribute('inputmode', 'decimal');
-      inp.dataset.currency = c;
-      inp.value = fmtRate(rates[c]);
-      inp.addEventListener('input', function () { inp.classList.remove('invalid'); ratesError.textContent = ''; });
-      row.appendChild(inp);
-      row.appendChild(el('span', 'unit', '€'));
-      ratesList.appendChild(row);
+    var mine = recentCurrencies().filter(function (c) { return c !== 'EUR'; });
+    var rest = CURRENCIES_SORTED.filter(function (c) { return c !== 'EUR' && mine.indexOf(c) < 0; });
+    [['Deine Währungen', mine], ['Alle Währungen', rest]].forEach(function (sec) {
+      if (!sec[1].length) return;
+      var wrap = el('div', 'rate-section');
+      wrap.appendChild(el('h3', 'rate-sec-title', sec[0]));
+      var group = el('div', 'rates-group');
+      sec[1].forEach(function (c) { group.appendChild(rateRow(c, rates)); });
+      wrap.appendChild(group);
+      ratesList.appendChild(wrap);
     });
+    var none = el('p', 'rate-none', 'Keine passende Währung gefunden.');
+    none.id = 'rateNone';
+    ratesList.appendChild(none);
+    filterRates();
   }
+
+  function filterRates() {
+    var q = rateSearch.value.trim().toLowerCase();
+    var any = false;
+    ratesList.querySelectorAll('.rate-section').forEach(function (sec) {
+      var visible = 0;
+      sec.querySelectorAll('.rate-row').forEach(function (row) {
+        var hit = !q || row.dataset.search.indexOf(q) > -1;
+        row.classList.toggle('hide', !hit);
+        if (hit) visible++;
+      });
+      sec.classList.toggle('hide', !visible);
+      if (visible) any = true;
+    });
+    $('#rateNone').classList.toggle('hide', any);
+  }
+  rateSearch.addEventListener('input', filterRates);
 
   document.querySelectorAll('.open-rates').forEach(function (btn) {
     btn.addEventListener('click', function () {
+      rateSearch.value = '';
       buildRatesForm(state.rates);
       $('#recalcToggle').checked = false;
       openOverlay(ratesOverlay);
+      $('.sheet-body').scrollTop = 0;
     });
   });
   $('#ratesCancel').addEventListener('click', function () { closeOverlay(ratesOverlay); });
@@ -1550,7 +1788,13 @@
         newRates[inp.dataset.currency] = v;
       }
     });
-    if (!ok) { ratesError.textContent = 'Bitte gültige Kurse größer als 0 eingeben, z. B. 0,92.'; return; }
+    if (!ok) {
+      ratesError.textContent = 'Bitte gültige Kurse größer als 0 eingeben, z. B. 0,92.';
+      rateSearch.value = '';
+      filterRates();
+      ratesList.querySelector('.rate-input.invalid').scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return;
+    }
 
     state.rates = newRates;
     var recalc = $('#recalcToggle').checked;
@@ -1585,6 +1829,7 @@
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
     save();
     setCurrency(state.lastCurrency);
+    fillCurrencySelect();
     setCategory(state.lastCategory);
     clearFormError();
     updateConvHint();
@@ -1606,6 +1851,7 @@
     state.rates = Object.assign({}, DEFAULT_RATES);
     load();
     render();
+    fillCurrencySelect();
     updateConvHint();
   });
 
@@ -1670,9 +1916,10 @@
   /* Optional: Liegt eine sw.js neben dieser Datei, startet die App auch ohne Netz vom Home-Bildschirm. */
   function registerServiceWorker() {
     if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
-    window.addEventListener('load', function () {
+    var reg = function () {
       navigator.serviceWorker.register('sw.js').catch(function () { /* keine sw.js vorhanden – App funktioniert trotzdem */ });
-    });
+    };
+    if (document.readyState === 'complete') reg(); else window.addEventListener('load', reg);
   }
 
   /* ---------- Start ---------- */
